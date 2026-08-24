@@ -4,20 +4,21 @@
   <meta charset="utf-8">
   <title>畫中畫無限縮放編輯器</title>
   <link rel="icon" href="icon/icon.png" type="image/png">
-  <!-- 引入 JSZip 與 FileSaver (用於匯出 ZIP 打包檔), https://cdnjs.com/libraries/FileSaver.js/2.0.5, https://cdnjs.com/libraries/jszip -->
+  <!-- 引入 JSZip 與 FileSaver (用於匯出 ZIP 打包檔) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-  <!-- 引入範本檔（不受 CORS 限制，可直接雙擊開檔案執行） -->
+  <!-- 引入範本檔與旋轉模組 -->
   <script src="template.js"></script>
+  <script src="rotation.js"></script>
   <style>
     body { margin: 0; font-family: system-ui, sans-serif; display: flex; height: 100vh; background: #f0f2f5; overflow: hidden; user-select: none; }
 
     /* 左側控制面板 */
     .sidebar { width: 380px; background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; z-index: 10; }
-        .sidebar-header { 
+    .sidebar-header { 
       padding: 14px 20px; 
       border-bottom: 1px solid #eee; 
-	  background: #fffbe6;
+      background: #fffbe6;
       color: #333333;
       display: flex;
       align-items: center;
@@ -25,14 +26,12 @@
     .sidebar-header h2 { margin: 0; font-size: 18px; }
     .sidebar-header p { margin: 5px 0 0 0; font-size: 12px; color: #aaa; }
 	
-	    .header-icon {
+    .header-icon {
       width: 100px;
-      height:100px;
+      height: 100px;
       object-fit: contain;
       flex-shrink: 0;
     }
-	
-	
     
     .layers-container { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 15px; }
     
@@ -56,44 +55,39 @@
     .btn-upload:hover { background: #218838; }
     .path-display { flex: 1; padding: 8px; background: #e9ecef; border: 1px dashed #ccc; border-radius: 4px; font-size: 11px; color: #666; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.btn { 
-  padding: 12px 24px; 
-  border: none; 
-  border-radius: 50px; /* 設為較大的圓角值以達成圓角膠囊樣式 */
-  cursor: pointer; 
-  font-weight: bold; 
-  transition: all 0.3s ease; 
-  text-align: center; 
-  font-size: 14px; 
-  color: #ffffff;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); /* 增加輕微陰影提升質感 */
-}
+    .btn { 
+      padding: 12px 24px; 
+      border: none; 
+      border-radius: 50px;
+      cursor: pointer; 
+      font-weight: bold; 
+      transition: all 0.3s ease; 
+      text-align: center; 
+      font-size: 14px; 
+      color: #ffffff;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    }
 
-/* ＋ 新增圖片階段按鈕 (維持青綠/綠藍漸層) */
-.btn-add { 
-  background: linear-gradient(90deg, #17a2b8, #20c997); 
-  margin: 15px 15px 5px 15px; 
-}
+    .btn-add { 
+      background: linear-gradient(90deg, #17a2b8, #20c997); 
+      margin: 15px 15px 5px 15px; 
+    }
 
-/* 💾 匯出 HTML 網頁按鈕 (維持藍色/紫藍漸層) */
-.btn-export { 
-  background: linear-gradient(90deg, #007bff, #ff3bd8); 
-  margin: 5px 15px 15px 15px; 
-}
+    .btn-export { 
+      background: linear-gradient(90deg, #007bff, #ff3bd8); 
+      margin: 5px 15px 15px 15px; 
+    }
 
-/* Hover 懸停效果 */
-.btn:hover { 
-  opacity: 0.95; 
-  transform: translateY(-2px); 
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2); 
-}
+    .btn:hover { 
+      opacity: 0.95; 
+      transform: translateY(-2px); 
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2); 
+    }
 
-/* Click 點擊效果 */
-.btn:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
-}   
-
+    .btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+    }   
 
     /* 右側畫布預覽區 */
     .canvas-area { flex: 1; display: flex; flex-direction: column; position: relative; background: #e9ecef; overflow-y: auto; }
@@ -108,18 +102,17 @@
       gap: 15px; 
       box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
       z-index: 5; 
-      position: relative; /* 確保偽元素定位正確 */
+      position: relative;
     }
 
-    /* 頂部控制列底部的漸層亮色邊框 (Gradient Line) */
     .toolbar::after {
       content: "";
       position: absolute;
       bottom: 0;
       left: 0;
       width: 100%;
-      height: 3px; /* 邊框厚度 */
-      background: linear-gradient(90deg, #b026ff, #007bff, #00f2fe, #38ef7d); /* 紫 -> 藍 -> 青 -> 綠 漸層 */
+      height: 3px;
+      background: linear-gradient(90deg, #b026ff, #007bff, #00f2fe, #38ef7d);
     }
     .mode-btn { padding: 8px 16px; border-radius: 20px; border: 2px solid #ccc; background: #fff; cursor: pointer; font-weight: bold; color: #555; transition: all 0.2s; }
     .mode-btn.is-editing { border-color: #ff3b30; background: #fff0f0; color: #ff3b30; }
@@ -127,19 +120,17 @@
 
     .canvas-wrapper { flex: 1; display: flex; justify-content: center; align-items: center; overflow: hidden; padding: 20px; min-height: 85vh; }
     .canvas-container { 
-  width: 600px;             /* 1. 給予預設初始寬度 */
-  height: 600px;            /* 2. 給予預設初始高度 */
-  min-width: 300px;         /* 3. 設定最小可縮小的寬度 */
-  min-height: 300px;        /* 4. 設定最小可縮小的高度 */
-  background: #fff; 
-  box-shadow: 0 15px 40px rgba(0,0,0,0.15); 
-  border-radius: 4px; 
-  overflow: hidden;         /* 保持 resize 運作必備條件 */
-  position: relative; 
-
-  /* 🎯 關鍵：啟用使用者手動拖拉伸縮 */
-  resize: both;             /* 允許水平與垂直方向自由拉伸 */
-}
+      width: 600px;
+      height: 600px;
+      min-width: 300px;
+      min-height: 300px;
+      background: #fff; 
+      box-shadow: 0 15px 40px rgba(0,0,0,0.15); 
+      border-radius: 4px; 
+      overflow: hidden;
+      position: relative; 
+      resize: both;
+    }
     
     .preview-svg { width: 100%; height: 100%; display: block; background: #fafafa; }
     .preview-svg.mode-view { cursor: grab; }
@@ -156,8 +147,8 @@
 
   <!-- 左側控制面板 -->
   <div class="sidebar">
-  <div class="sidebar-header">
-    <img src="icon/icon.png" alt="Logo" class="header-icon">
+    <div class="sidebar-header">
+      <img src="icon/icon.png" alt="Logo" class="header-icon">
       <div class="header-text">
         <h2>Web版畫中畫 GUI 編輯器</h2>
         <p>開源程式(免安裝)</p>
@@ -191,7 +182,7 @@
 
 <script>
 let layers = [
-  { stage: 1, path: "", previewSrc: "", baseSize: 700, x: 0, y: 0, scale: 1, trigger: 10000, file: null }
+  { stage: 1, path: "", previewSrc: "", baseSize: 700, x: 0, y: 0, scale: 1, angle: 0, trigger: 10000, file: null }
 ];
 
 let activeStage = 1;
@@ -202,33 +193,67 @@ let viewStates = {
 };
 
 let isDragging = false;
+let isRotating = false;
+let startAngleOffset = 0;
 let lastMouseX, lastMouseY;
-let isEventsBound = false; //防同時多個相同的function在run，免zoom ratio疊加
+let isEventsBound = false;
 
 function init() {
   renderLayersControl();
-  renderPreview();
+  setMode(activeStage > 1 ? 'edit' : 'view');
   setupCanvasEvents();
 }
 
-function setMode(mode) {
-  interactionMode = mode;
+/**
+ * 更新模式按鈕的 UI 狀態 (包含 Stage 1 灰顯 / 禁用邏輯)
+ */
+function updateModeButtonsUI() {
   const btnView = document.getElementById('btnModeView');
   const btnEdit = document.getElementById('btnModeEdit');
-  const svg = document.getElementById('previewSvg');
-  const help = document.getElementById('helpText');
   
-  if (mode === 'view') {
+  // 當前為 Stage 1 時，禁用 Edit 按鈕並灰顯
+  if (activeStage === 1) {
+    btnEdit.disabled = true;
+    btnEdit.style.opacity = '0.4';
+    btnEdit.style.cursor = 'not-allowed';
+    btnEdit.title = 'Stage 1 為最底層背景，無法進行相對內嵌調整';
+  } else {
+    btnEdit.disabled = false;
+    btnEdit.style.opacity = '1';
+    btnEdit.style.cursor = 'pointer';
+    btnEdit.title = '';
+  }
+
+  // 模式選取高亮樣式
+  if (interactionMode === 'view') {
     btnView.classList.add('is-viewing');
     btnEdit.classList.remove('is-editing');
-    svg.className = "preview-svg mode-view";
-    help.textContent = "💡 提示：拖曳以平移背景，滾輪放大縮小背景視角";
   } else {
     btnView.classList.remove('is-viewing');
     btnEdit.classList.add('is-editing');
-    svg.className = "preview-svg mode-edit";
-    help.textContent = "🎯 提示：在畫布上直接拖曳移動紅框，滾輪可放大縮小紅框圖片";
   }
+}
+
+function setMode(mode) {
+  // 保護機制：Stage 1 強制鎖定為 view
+  if (activeStage === 1 && mode === 'edit') {
+    interactionMode = 'view';
+  } else {
+    interactionMode = mode;
+  }
+
+  const svg = document.getElementById('previewSvg');
+  const help = document.getElementById('helpText');
+  
+  if (interactionMode === 'view') {
+    svg.className = "preview-svg mode-view";
+    help.textContent = "💡 提示：平移與縮放背景視角，無法移動內嵌圖形";
+  } else {
+    svg.className = "preview-svg mode-edit";
+    help.textContent = "🎯 提示：拖曳移動當前階段紅框，滾輪縮放圖片，拖曳紅色按鈕旋轉";
+  }
+
+  updateModeButtonsUI();
   renderPreview();
 }
 
@@ -241,13 +266,20 @@ function renderLayersControl() {
     
     card.addEventListener('mousedown', (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+      
       activeStage = layer.stage; 
       if (!viewStates[activeStage]) {
         viewStates[activeStage] = { zoom: 1.0, focusX: layer.baseSize / 2, focusY: layer.baseSize / 2 };
       }
-      setMode('view');
+      
+      // Stage 1 進入 View Mode，Stage 2+ 自動切至 Edit Mode
+      if (activeStage > 1) {
+        setMode('edit');
+      } else {
+        setMode('view');
+      }
+
       renderLayersControl(); 
-      renderPreview();
     });
 
     const isLast = (index === layers.length - 1 && index > 0);
@@ -285,6 +317,13 @@ function handleFileUpload(event, index) {
   layers[index].path = `Material/${file.name}`;
   layers[index].previewSrc = tempPreviewUrl;
 
+  activeStage = layers[index].stage;
+  if (activeStage > 1) {
+    setMode('edit');
+  } else {
+    setMode('view');
+  }
+
   renderLayersControl();
   renderPreview();
 }
@@ -313,13 +352,17 @@ function addLayer() {
     x: 250, 
     y: 250, 
     scale: 0.3, 
+    angle: 0,
     trigger: 10000,
     file: null
   });
   
   viewStates[newStage] = { zoom: 1.0, focusX: 500, focusY: 500 };
+  
   activeStage = newStage;
-  init();
+  setMode('edit');
+
+  renderLayersControl();
 }
 
 function removeLastLayer(event) {
@@ -330,9 +373,19 @@ function removeLastLayer(event) {
   const lastIndex = layers.length - 1;
   layers[lastIndex].trigger = 10000;
   if (activeStage > layers.length) activeStage = layers.length;
-  init();
+  
+  if (activeStage > 1) {
+    setMode('edit');
+  } else {
+    setMode('view');
+  }
+  
+  renderLayersControl();
 }
 
+/**
+ * 遞迴構建預覽用 SVG 樹
+ */
 function buildRecursiveSVGElement(index) {
   const layer = layers[index];
   if (!layer) return null;
@@ -343,6 +396,10 @@ function buildRecursiveSVGElement(index) {
   img.setAttributeNS("http://www.w3.org/1999/xlink", "href", layer.previewSrc || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23eee'/><text x='10' y='50' fill='%23999' font-size='12'>未上傳圖片</text></svg>");
   img.setAttribute("width", layer.baseSize);
   img.setAttribute("height", layer.baseSize);
+  
+  if (layer.angle) {
+    img.setAttribute("transform", `rotate(${layer.angle}, ${layer.baseSize / 2}, ${layer.baseSize / 2})`);
+  }
   g.appendChild(img);
 
   const nextIndex = index + 1;
@@ -355,26 +412,58 @@ function buildRecursiveSVGElement(index) {
       g.appendChild(subGroup);
     }
 
-    const isDirectNext = (layer.stage === activeStage);
+    const isTargetToEdit = (nextLayer.stage === activeStage) && (interactionMode === 'edit');
+
     const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
     rect.setAttribute("width", nextLayer.baseSize);
     rect.setAttribute("height", nextLayer.baseSize);
     rect.setAttribute("vector-effect", "non-scaling-stroke");
 
-    if (isDirectNext && interactionMode === 'edit') {
+    if (isTargetToEdit) {
       rect.setAttribute("fill", "rgba(255, 59, 48, 0.08)");
       rect.setAttribute("stroke", "#ff3b30");
       rect.setAttribute("stroke-width", "2");
     } else {
       rect.setAttribute("fill", "none");
-      rect.setAttribute("stroke", "rgba(255, 59, 48, 0.4)");
-      rect.setAttribute("stroke-width", "1");
+      rect.setAttribute("stroke", "transparent");
     }
     
     const rectGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    rectGroup.setAttribute("transform", `translate(${nextLayer.x}, ${nextLayer.y}) scale(${nextLayer.scale})`);
+    const nextAngle = nextLayer.angle || 0;
+    rectGroup.setAttribute("transform", `translate(${nextLayer.x}, ${nextLayer.y}) scale(${nextLayer.scale}) rotate(${nextAngle}, ${nextLayer.baseSize / 2}, ${nextLayer.baseSize / 2})`);
     rectGroup.appendChild(rect);
     g.appendChild(rectGroup);
+
+    if (isTargetToEdit) {
+      const parentLayer = layers.find(l => l.stage === activeStage - 1) || layers[0];
+      const state = viewStates[parentLayer.stage] || { zoom: 1.0 };
+      const info = getNextLayerWorldInfo(nextLayer, parentLayer.baseSize, state.zoom);
+      
+      const scaleFactor = 1.5;
+      const bigRadius = info.visualRadius * scaleFactor;
+
+      const handleGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      handleGroup.setAttribute("id", "rotateHandle");
+      handleGroup.setAttribute("transform", `translate(${info.handleX}, ${info.handleY})`);
+      handleGroup.setAttribute("style", "cursor: grab;");
+
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("cx", "0");
+      circle.setAttribute("cy", "0");
+      circle.setAttribute("r", bigRadius);
+      circle.setAttribute("fill", "#eb2553");
+      circle.setAttribute("stroke", "#ffffff");
+      circle.setAttribute("stroke-width", bigRadius / 4);
+      handleGroup.appendChild(circle);
+
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      const r = bigRadius * 0.5;
+      path.setAttribute("d", `M 0 ${-r} A ${r} ${r} 0 1 1 ${-r} 0 L ${-r*1.3} 0 L ${-r*0.8} ${-r*0.5} L ${-r*0.3} 0 L ${-r*0.6} 0 A ${r*0.6} ${r*0.6} 0 1 0 0 ${-r*0.6} Z`);
+      path.setAttribute("fill", "#ffffff");
+      handleGroup.appendChild(path);
+
+      g.appendChild(handleGroup);
+    }
   }
 
   return g;
@@ -383,67 +472,94 @@ function buildRecursiveSVGElement(index) {
 function renderPreview() {
   const svg = document.getElementById('previewSvg');
   svg.innerHTML = '';
-  
-  const currentLayerIndex = layers.findIndex(l => l.stage === activeStage);
-  if (currentLayerIndex === -1) return;
 
-  const currentLayer = layers[currentLayerIndex];
-  const state = viewStates[activeStage];
+  let renderRootIndex = 0;
+  let viewStateKey = activeStage;
+
+  if (activeStage > 1) {
+    renderRootIndex = layers.findIndex(l => l.stage === activeStage - 1);
+    viewStateKey = activeStage - 1;
+  } else {
+    renderRootIndex = layers.findIndex(l => l.stage === activeStage);
+  }
+
+  if (renderRootIndex === -1) renderRootIndex = 0;
+
+  const rootLayer = layers[renderRootIndex];
+  const state = viewStates[viewStateKey] || { zoom: 1.0, focusX: rootLayer.baseSize / 2, focusY: rootLayer.baseSize / 2 };
   
-  const viewWidth = currentLayer.baseSize / state.zoom;
-  const viewHeight = currentLayer.baseSize / state.zoom;
+  const viewWidth = rootLayer.baseSize / state.zoom;
+  const viewHeight = rootLayer.baseSize / state.zoom;
   const viewX = state.focusX - viewWidth / 2;
   const viewY = state.focusY - viewHeight / 2;
   svg.setAttribute("viewBox", `${viewX} ${viewY} ${viewWidth} ${viewHeight}`);
 
-  const recursiveTree = buildRecursiveSVGElement(currentLayerIndex);
+  const recursiveTree = buildRecursiveSVGElement(renderRootIndex);
   if (recursiveTree) svg.appendChild(recursiveTree);
 
-  document.getElementById('infoOverlay').textContent = `檢視：Stage ${activeStage} (${state.zoom.toFixed(2)}x)`;
+  document.getElementById('infoOverlay').textContent = `檢視：Stage ${activeStage} (${interactionMode === 'edit' ? '🎯 編輯紅框' : '👁️ 移動視角'})`;
 }
 
 function setupCanvasEvents() {
-//若已經run過一次，直接break，防止重複綁定
   if (isEventsBound) return;
-  isEventsBound = true; //首次run後，立即退場
+  isEventsBound = true;
 
   const canvas = document.getElementById('canvasContainer');
   
+  function getEventContext() {
+    let parentIndex = 0;
+    let targetIndex = -1;
+
+    if (activeStage > 1) {
+      parentIndex = layers.findIndex(l => l.stage === activeStage - 1);
+      targetIndex = layers.findIndex(l => l.stage === activeStage);
+    } else {
+      parentIndex = 0;
+      targetIndex = -1;
+    }
+
+    if (parentIndex === -1) parentIndex = 0;
+    const parentLayer = layers[parentIndex];
+    const targetLayer = targetIndex !== -1 ? layers[targetIndex] : null;
+    const stateKey = parentLayer.stage;
+    
+    if (!viewStates[stateKey]) {
+      viewStates[stateKey] = { zoom: 1.0, focusX: parentLayer.baseSize / 2, focusY: parentLayer.baseSize / 2 };
+    }
+
+    return { parentLayer, targetLayer, state: viewStates[stateKey] };
+  }
+
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
     const svg = document.getElementById('previewSvg');
     const rect = svg.getBoundingClientRect();
-    const currentLayer = layers.find(l => l.stage === activeStage) || layers[0];
-    const nextLayerIndex = layers.findIndex(l => l.stage === activeStage + 1);
-    const state = viewStates[activeStage];
+    const { parentLayer, targetLayer, state } = getEventContext();
 
-    const size = currentLayer.baseSize / state.zoom;
+    const size = parentLayer.baseSize / state.zoom;
     const viewX = state.focusX - size / 2;
     const viewY = state.focusY - size / 2;
     
-    // 正確取得相對座標
     const mouseX = viewX + ((e.clientX - rect.left) / rect.width) * size;
     const mouseY = viewY + ((e.clientY - rect.top) / rect.height) * size;
 
-    if (interactionMode === 'edit' && nextLayerIndex !== -1) {
-      const nextLayer = layers[nextLayerIndex];
+    if (interactionMode === 'edit' && targetLayer) {
       const factor = e.deltaY < 0 ? 1.10 : 0.90; 
       
-      // 計算新的 scale 並加入限制防呆 (0.00001 ~ 100)
-      const newScale = Math.min(Math.max(nextLayer.scale * factor, 0.00001), 100);
-      const actualFactor = newScale / nextLayer.scale;
+      const newScale = Math.min(Math.max(targetLayer.scale * factor, 0.00001), 100);
+      const actualFactor = newScale / targetLayer.scale;
       
-      const relX = mouseX - nextLayer.x;
-      const relY = mouseY - nextLayer.y;
-      nextLayer.x = mouseX - relX * actualFactor;
-      nextLayer.y = mouseY - relY * actualFactor;
-      nextLayer.scale = newScale;
+      const relX = mouseX - targetLayer.x;
+      const relY = mouseY - targetLayer.y;
+      targetLayer.x = mouseX - relX * actualFactor;
+      targetLayer.y = mouseY - relY * actualFactor;
+      targetLayer.scale = newScale;
 
       renderPreview();
     } else {
       const factor = e.deltaY < 0 ? 1.1 : 0.9;
       state.zoom = Math.max(0.1, state.zoom * factor);
-      const newSize = currentLayer.baseSize / state.zoom;
+      const newSize = parentLayer.baseSize / state.zoom;
       state.focusX = mouseX - ((e.clientX - rect.left) / rect.width) * newSize + newSize / 2;
       state.focusY = mouseY - ((e.clientY - rect.top) / rect.height) * newSize + newSize / 2;
       renderPreview();
@@ -451,25 +567,68 @@ function setupCanvasEvents() {
   },{passive:false});
 
   canvas.addEventListener('mousedown', (e) => {
+    const svg = document.getElementById('previewSvg');
+    const rect = svg.getBoundingClientRect();
+    const { parentLayer, targetLayer, state } = getEventContext();
+
+    const size = parentLayer.baseSize / state.zoom;
+    const viewX = state.focusX - size / 2;
+    const viewY = state.focusY - size / 2;
+    
+    const mouseX = viewX + ((e.clientX - rect.left) / rect.width) * size;
+    const mouseY = viewY + ((e.clientY - rect.top) / rect.height) * size;
+
+    if (interactionMode === 'edit' && targetLayer) {
+      const rotResult = handleRotationStart(e, { x: mouseX, y: mouseY }, targetLayer, parentLayer.baseSize, state.zoom);
+      if (rotResult.isRotating) {
+        isRotating = true;
+        startAngleOffset = rotResult.startAngleOffset;
+        return;
+      }
+    }
+
     isDragging = true;
     lastMouseX = e.clientX;
     lastMouseY = e.clientY;
   });
 
   window.addEventListener('mousemove', (e) => {
-    if (!isDragging) return;
     const svg = document.getElementById('previewSvg');
     const rect = svg.getBoundingClientRect();
-    const currentLayer = layers.find(l => l.stage === activeStage) || layers[0];
-    const nextLayerIndex = layers.findIndex(l => l.stage === activeStage + 1);
-    const state = viewStates[activeStage];
+    const { parentLayer, targetLayer, state } = getEventContext();
 
-    const deltaX = ((e.clientX - lastMouseX) / rect.width) * (currentLayer.baseSize / state.zoom);
-    const deltaY = ((e.clientY - lastMouseY) / rect.height) * (currentLayer.baseSize / state.zoom);
+    const size = parentLayer.baseSize / state.zoom;
+    const viewX = state.focusX - size / 2;
+    const viewY = state.focusY - size / 2;
 
-    if (interactionMode === 'edit' && nextLayerIndex !== -1) {
-      layers[nextLayerIndex].x += deltaX;
-      layers[nextLayerIndex].y += deltaY;
+    const mouseX = viewX + ((e.clientX - rect.left) / rect.width) * size;
+    const mouseY = viewY + ((e.clientY - rect.top) / rect.height) * size;
+
+    if (isRotating && interactionMode === 'edit' && targetLayer) {
+      handleRotationMove({ x: mouseX, y: mouseY }, targetLayer, parentLayer.baseSize, state.zoom, startAngleOffset);
+      renderPreview();
+      return;
+    }
+
+    if (!isDragging) {
+      if (interactionMode === 'edit' && targetLayer) {
+        const info = getNextLayerWorldInfo(targetLayer, parentLayer.baseSize, state.zoom);
+        const dist = Math.hypot(mouseX - info.handleX, mouseY - info.handleY);
+        if (dist <= info.visualRadius * 2.5) {
+          svg.style.cursor = 'grab';
+        } else {
+          svg.style.cursor = 'move';
+        }
+      }
+      return;
+    }
+
+    const deltaX = ((e.clientX - lastMouseX) / rect.width) * (parentLayer.baseSize / state.zoom);
+    const deltaY = ((e.clientY - lastMouseY) / rect.height) * (parentLayer.baseSize / state.zoom);
+
+    if (interactionMode === 'edit' && targetLayer) {
+      targetLayer.x += deltaX;
+      targetLayer.y += deltaY;
     } else {
       state.focusX -= deltaX;
       state.focusY -= deltaY;
@@ -480,126 +639,111 @@ function setupCanvasEvents() {
     renderPreview();
   });
 
-  window.addEventListener('mouseup', () => { isDragging = false; });
+  window.addEventListener('mouseup', () => { 
+    isDragging = false; 
+    isRotating = false;
+  });
 }
 
-// 直接讀取全域變數 EXPORT_TEMPLATE 並替換下載
 function exportHTML() {
-  if (layers.length < 1) return;
+  if (layers.length < 1 || typeof EXPORT_TEMPLATE === 'undefined') return;
 
-  if (typeof EXPORT_TEMPLATE === 'undefined') {
-    alert("找不到 template.js，請確定它與 editor.html 放在同一個資料夾內。");
-    return;
-  }
-
-  // 1. 生成雙向完美的互動設定數據
   let stageConfigString = layers.map((l, idx) => {
-    if (idx === 0) {
-      const next = layers[1] || { x: 500, y: 500, scale: 0.1, baseSize: 1000 };
-      return `  {
-    stage: 1,
-    baseSize: ${l.baseSize},
-    minZoom: 1.0, 
-    panelColor: "rgba(0, 0, 0, 0.85)", 
-    panelPrefix: "",
-    transitionTrigger: ${l.trigger},
-    lockThreshold: Infinity,
-    checkTargetValid: null,
-    calculateNext: (x, y, currentZoom) => {
-      const newX = (x - ${next.x}) / ${next.scale};
-      const newY = (y - ${next.y}) / ${next.scale};
-      const newZoom = currentZoom * ${next.scale} * (${next.baseSize} / ${l.baseSize}); 
-      return { x: newX, y: newY, zoom: newZoom };
-    }
-  }`;
+    const prev = layers[idx - 1];
+    const next = layers[idx + 1];
+
+    let nextCalcCode = '';
+    if (next) {
+      nextCalcCode = `(x, y, currentZoom) => {
+        const tx = x - ${next.x};
+        const ty = y - ${next.y};
+
+        const sx = tx / ${next.scale};
+        const sy = ty / ${next.scale};
+
+        const nextZoom = currentZoom * ${next.scale} * (${next.baseSize} / ${l.baseSize});
+
+        return {
+          x: sx,
+          y: sy,
+          zoom: nextZoom
+        };
+      }`;
     } else {
-      const prev = layers[idx - 1];
-      const next = layers[idx + 1];
-      // 🎯 精準計算進入此階段時的初始 Zoom (作為退回上一階段的 minZoom 觸發線)
+      nextCalcCode = `(x, y, currentZoom) => ({ x, y, zoom: currentZoom })`;
+    }
+
+    if (idx === 0) {
+      return `  {
+      stage: 1, 
+      baseSize: ${l.baseSize}, 
+      minZoom: 1.0, 
+      panelColor: "rgba(0, 0, 0, 0.85)", 
+      panelPrefix: "", 
+      transitionTrigger: ${l.trigger}, 
+      lockThreshold: Infinity, 
+      checkTargetValid: null,
+      calculateNext: ${nextCalcCode}
+    }`;
+    } else {
       const entryZoom = prev.trigger * l.scale * (l.baseSize / prev.baseSize);
 
       return `  {
-    stage: ${l.stage},
-    baseSize: ${l.baseSize},
-    minZoom: ${entryZoom}, 
-    panelColor: "rgba(0, 32, 96, 0.85)", 
-    panelPrefix: "階段${l.stage} ",
-    transitionTrigger: ${l.trigger}, 
-    lockThreshold: Infinity,
-    checkTargetValid: null,
-    calculateNext: (x, y, currentZoom) => {
-      ${next ? `
-      const newX = (x - ${next.x}) / ${next.scale};
-      const newY = (y - ${next.y}) / ${next.scale};
-      const newZoom = currentZoom * ${next.scale} * (${next.baseSize} / ${l.baseSize});
-      return { x: newX, y: newY, zoom: newZoom };
-      ` : `return { x: x, y: y, zoom: currentZoom };`}
-    },
-    calculatePrev: (x, y, currentZoom) => {
-      // 🎯 對稱還原上一階段的座標與 Zoom
-      const origX = x * ${l.scale} + ${l.x};
-      const origY = y * ${l.scale} + ${l.y};
-      const origZoom = currentZoom / (${l.scale} * (${l.baseSize} / ${prev.baseSize}));
-      return { x: origX, y: origY, zoom: origZoom };
-    }
-  }`;
+      stage: ${l.stage}, 
+      baseSize: ${l.baseSize}, 
+      minZoom: ${entryZoom}, 
+      panelColor: "rgba(0, 32, 96, 0.85)", 
+      panelPrefix: "階段${l.stage} ", 
+      transitionTrigger: ${l.trigger}, 
+      lockThreshold: Infinity, 
+      checkTargetValid: null,
+      calculateNext: ${nextCalcCode},
+      calculatePrev: (x, y, currentZoom) => {
+        const prevZoom = currentZoom / (${l.scale} * (${l.baseSize} / ${prev.baseSize}));
+
+        return {
+          x: ${l.x} + x * ${l.scale},
+          y: ${l.y} + y * ${l.scale},
+          zoom: prevZoom
+        };
+      }
+    }`;
     }
   }).join(",\n");
 
-  // 2. 遞迴生成 SVG 樹
   function buildExportSVGTree(index) {
     const l = layers[index];
     if (!l) return '';
     const next = layers[index + 1];
     let currentSrc = l.path || `Material/empty_stage${l.stage}.svg`;
-    let innerHTML = `<g><image href="${currentSrc}" width="${l.baseSize}" height="${l.baseSize}"/></g>`;
+    
+    const imgAngle = l.angle || 0;
+    let innerHTML = `<g><image href="${currentSrc}" width="${l.baseSize}" height="${l.baseSize}" transform="rotate(${imgAngle}, ${l.baseSize / 2}, ${l.baseSize / 2})"/></g>`;
     
     if (next) {
       const nextTree = buildExportSVGTree(index + 1);
       innerHTML += `\n      <g transform="translate(${next.x}, ${next.y}) scale(${next.scale})">${nextTree}</g>`;
     }
+
     return innerHTML;
   }
 
-  let svgElementsString = layers.map((l, idx) => {
-    const isFirst = idx === 0;
-    const innerTree = buildExportSVGTree(idx);
-    return `    <svg xmlns="http://www.w3.org/2000/svg" id="mysvg${l.stage}" viewBox="0 0 ${l.baseSize} ${l.baseSize}" style="display: ${isFirst ? 'block' : 'none'};">
-    ${innerTree}
-  </svg>`;
-  }).join("\n");
+  let svgElementsString = layers.map((l, idx) => 
+    `    <svg xmlns="http://www.w3.org/2000/svg" id="mysvg${l.stage}" viewBox="0 0 ${l.baseSize} ${l.baseSize}" style="display: ${idx === 0 ? 'block' : 'none'};">\n    ${buildExportSVGTree(idx)}\n  </svg>`
+  ).join("\n");
 
-  // 3. 代入 EXPORT_TEMPLATE
-  const finalHTML = EXPORT_TEMPLATE
-    .replace('/* {{STAGE_CONFIG}} */', stageConfigString)
-    .replace('<!-- {{SVG_ELEMENTS}} -->', svgElementsString);
-
-  // 4. 下載匯出檔 (打包成 ZIP 壓縮檔)
-  if (typeof JSZip === 'undefined' || typeof saveAs === 'undefined') {
-    alert("JSZip 或 FileSaver 載入失敗，請檢查網路連線。");
-    return;
-  }
+  const finalHTML = EXPORT_TEMPLATE.replace('/* {{STAGE_CONFIG}} */', stageConfigString).replace('<!-- {{SVG_ELEMENTS}} -->', svgElementsString);
 
   const zip = new JSZip();
-
-  // 將 HTML 放到 ZIP 根目錄
   zip.file("index.html", finalHTML);
-
-  // 建立 Material 資料夾放上傳的圖片
   const materialFolder = zip.folder("Material");
+  layers.forEach((layer) => { if (layer.file) materialFolder.file(layer.file.name, layer.file); });
 
-  // 遍歷所有階段，將上傳過的圖片存入 Material/
-  layers.forEach((layer) => {
-    if (layer.file) {
-      materialFolder.file(layer.file.name, layer.file);
-    }
-  });
-
-  // 打包並觸發下載
   zip.generateAsync({ type: "blob" }).then(function (content) {
     saveAs(content, "PnP_Deep_Recursive_Export.zip");
   });
 }
+
 init();
 </script>
 <script src="comments.js"></script>
