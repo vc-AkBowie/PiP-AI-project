@@ -18,10 +18,17 @@ const EXPORT_TEMPLATE = `<!DOCTYPE html>
     }
     .info-close-btn:hover { background: #ef4444; border-color: #ef4444; color: #ffffff; transform: scale(1.15); box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
     
-    .size-controls { position: absolute; top: 20px; right: 24px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); padding: 6px; border-radius: 30px; border: 1px solid rgba(255, 255, 255, 0.1); display: flex; gap: 4px; z-index: 10; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15); }
+    /* 尺寸切換面板 */
+    .size-controls { position: absolute; top: 20px; right: 24px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); padding: 6px 10px 6px 6px; border-radius: 30px; border: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; gap: 4px; z-index: 10; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15); }
     .size-btn { background: transparent; border: none; color: #94a3b8; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; user-select: none; }
     .size-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
     .size-btn.active { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+
+    /* 尺寸面板專用關閉按鈕 */
+    .size-close-btn {
+      background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25); color: #ffffff; width: 22px; height: 22px; border-radius: 50%; cursor: pointer; font-size: 11px; font-weight: bold; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; line-height: 1; margin-left: 4px;
+    }
+    .size-close-btn:hover { background: #ef4444; border-color: #ef4444; color: #ffffff; transform: scale(1.15); box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
 
     .svg-container { box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.08); background: #ffffff; border-radius: 12px; position: relative; border: 1px solid #e2e8f0; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), height 0.4s cubic-bezier(0.4, 0, 0.2, 1), aspect-ratio 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
     .svg-container.size-small { height: 85vh; width: calc(85vh * 9 / 16); max-width: 90vw; aspect-ratio: 9 / 16; }
@@ -61,10 +68,11 @@ const EXPORT_TEMPLATE = `<!DOCTYPE html>
     <button class="info-close-btn" id="btnCloseInfo" title="關閉面板">✕</button>
   </div>
   
-  <div class="size-controls">
+  <div class="size-controls" id="sizeControls">
     <button class="size-btn" data-size="size-small" title="IG Story 比例 (9:16)">📱</button>
     <button class="size-btn active" data-size="size-medium" title="標準正方比例 (預設)">💻</button>
     <button class="size-btn" data-size="size-large" title="全螢幕模式">🖥️</button>
+    <button class="size-close-btn" id="btnCloseSize" title="關閉尺寸選單">✕</button>
   </div>
 
   <div class="svg-container size-medium" id="svgContainer">
@@ -91,6 +99,8 @@ const container = document.getElementById("svgContainer");
 const infoPanel = document.getElementById("infoPanel");
 const infoText = document.getElementById("infoText");
 const btnCloseInfo = document.getElementById("btnCloseInfo");
+const sizeControls = document.getElementById("sizeControls");
+const btnCloseSize = document.getElementById("btnCloseSize");
 const remoteWrapper = document.getElementById("remoteWrapper");
 const btnToggleRemote = document.getElementById("btnToggleRemote");
 const btnCloseRemote = document.getElementById("btnCloseRemote");
@@ -102,6 +112,7 @@ let focusX = STAGE_CONFIG[0].baseSize/2, focusY = STAGE_CONFIG[0].baseSize/2;
 let isDragging = false, lastX, lastY, needsUpdate = false;
 
 btnCloseInfo.addEventListener("click", () => { infoPanel.style.display = "none"; });
+btnCloseSize.addEventListener("click", () => { sizeControls.style.display = "none"; });
 btnCloseRemote.addEventListener("click", () => { remoteWrapper.style.display = "none"; });
 
 function getConfig() { return STAGE_CONFIG[currentStage - 1]; }
@@ -139,7 +150,7 @@ function updateViewBox() {
     }
   }
 
-  // 2. 向後切換階段 (Zoom Out) - 關鍵修正點！
+  // 2. 向後切換階段 (Zoom Out)
   if (zoom < config.minZoom) {
     if (currentStage > 1) {
       const prevState = config.calculatePrev(focusX, focusY, zoom);
@@ -150,7 +161,6 @@ function updateViewBox() {
       infoPanel.style.background = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
       needsUpdate = true; updateViewBox(); return;
     } else {
-      // 已經到達第一階段底限，鎖定 zoom 不再縮小
       zoom = config.minZoom;
     }
   }
@@ -158,12 +168,8 @@ function updateViewBox() {
   const { sizeX, sizeY } = getViewBoxSizes();
   getActiveSvg().setAttribute("viewBox", (focusX - sizeX / 2) + " " + (focusY - sizeY / 2) + " " + sizeX + " " + sizeY);
 
-
-//debug mode
-//infoPanel.innerHTML = "目前階段：Stage " + currentStage + "<br>X: " + focusX.toFixed(1) + " | Y: " + focusY.toFixed(1) + " | Zoom: " + displayZoom.toFixed(2) + "x";}
-  
-//demo mode
-infoText.innerHTML = "X: " + focusX.toFixed(1) + " | Y: " + focusY.toFixed(1) + " | Zoom: " + displayZoom.toFixed(2) + "x";}
+  infoText.innerHTML = "X: " + focusX.toFixed(1) + " | Y: " + focusY.toFixed(1) + " | Zoom: " + displayZoom.toFixed(2) + "x";
+}
 
 function zoomAt(factor, mouseX=null, mouseY=null) {
   const config = getConfig();
@@ -176,7 +182,6 @@ function zoomAt(factor, mouseX=null, mouseY=null) {
   let svgX = mouseX !== null ? viewX + (mouseX / rect.width) * oldSizeX : focusX;
   let svgY = mouseY !== null ? viewY + (mouseY / rect.height) * oldSizeY : focusY;
 
-  // 移除強制的 Math.max 鎖定，允許數值低於 minZoom 以便觸發後退切換
   zoom = zoom * factor;
   displayZoom = displayZoom * factor; 
   
