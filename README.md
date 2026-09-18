@@ -78,7 +78,7 @@ Make sure no images share the same file name in your project. Duplicate names wi
 ### 🎬 Video Tutorial (Chinese)
 <p align="center">
   <a href="https://youtu.be/Y78sOrr4coU" target="_blank">
-    <img src="resources/thumbnail.jpg" alt="Watch Video Tutorial" width="800">
+    <img src="resources/thumbnail.jpg" alt="Watch Video Tutorial" width="400">
   </a>
 </p>
 
