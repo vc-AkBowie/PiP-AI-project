@@ -57,9 +57,24 @@ Make sure no images share the exact same file name in your project. Duplicate na
 
 ## 📸 Preview
 
-*(Place a screenshot or GIF demo of your tool here)*
+### 💻 Main Interface
+<p align="center">
+  <img src="resources/interface.jpg" alt="Main Interface" width="600">
+</p>
 
-![Demo Screenshot](https://via.placeholder.com/800x450?text=Your+App+Screenshot)
+---
+
+### 🚀 Usage & Workflow
+<p align="center">
+  <img src="resources/usage.jpg" alt="Usage Guide" width="600">
+</p>
+
+---
+
+### 🎥 Demo
+<p align="center">
+  <img src="resources/" alt="App Demo" width="700">
+</p>
 
 ---
 
