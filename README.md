@@ -39,7 +39,7 @@
   Your exported project is automatically generated as a packaged `.zip` archive. When sharing your work, **do not send just the `index.html` file alone**, as the images will fail to render without the assets. Make sure recipients extract the full `.zip` archive so that `index.html` and the `Material/` folder stay together in the same directory.
 
 * **Directory Structure Requirements**:
-  The `index.html` file must reside in the exact same directory level as the `Material/` folder:
+  The `index.html` file must reside in the same directory level as the `Material/` folder:
   ```text
   📁 Project Root/
   ├── 📄 index.html         (Main Web Application File)
@@ -51,7 +51,11 @@
       └── 🖼️ 5.png
 
 * **Avoid Duplicate Image Names**:
-Make sure no images share the exact same file name in your project. Duplicate names will clash and overwrite each other, causing the affected images to fail to render.
+Make sure no images share the same file name in your project. Duplicate names will clash and overwrite each other, causing the affected images to fail to render.
+
+
+* **Directional Zooming Requirement**:
+  When configuring the zoom effect, make sure the zooming direction points toward the position of the next image. This ensures a normal transition between recursive layers.
 
 ---
 
@@ -67,6 +71,15 @@ Make sure no images share the exact same file name in your project. Duplicate na
 ### 🚀 Usage & Workflow
 <p align="center">
   <img src="resources/usage.jpg" alt="Usage Guide" width="600">
+</p>
+
+---
+
+### 🎬 Video Tutorial (Chinese)
+<p align="center">
+  <a href="https://youtu.be/Y78sOrr4coU" target="_blank">
+    <img src="resources/thumbnail.jpg" alt="Watch Video Tutorial" width="800">
+  </a>
 </p>
 
 ---
