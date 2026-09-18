@@ -73,7 +73,7 @@ Make sure no images share the exact same file name in your project. Duplicate na
 
 ### 🎥 Demo
 <p align="center">
-  <img src="resources/" alt="App Demo" width="700">
+  <img src="resources/demo product.gif" alt="App Demo" width="700">
 </p>
 
 ---
